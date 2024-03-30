@@ -1,6 +1,9 @@
 # image-to-videos
 fluent-ffmpeg use cases and examples
 
+Note - Create two directories - img-to-video/images and img-to-video/videos
+Add the images of your choice to the images directory and update the name of the images in the files below
+
 1. ```node index.js```
 
 Takes images and its duration as input and generates mp4 video based on the duration provided
