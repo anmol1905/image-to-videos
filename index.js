@@ -7,7 +7,13 @@ function createClipFromImage(imagePath, duration, outputClipPath, callback) {
     ffmpeg(imagePath)
         .inputOptions('-loop 1')
         .inputOptions(`-t ${duration}`)
-        .inputOptions('-framerate 25')
+        .inputOptions('-framerate 1')
+        .outputOptions([
+            '-c:v libx264',  // Use H.264 codec
+            '-pix_fmt yuv420p',  // Pixel format compatible with most devices
+            '-crf 23',  // Constant Rate Factor that balances quality and file size
+            '-preset veryfast'  // Faster encoding with reasonable file size
+        ])
         .output(outputClipPath)
         .on('end', () => {
             console.log(`Clip created: ${outputClipPath}`);
@@ -26,7 +32,7 @@ function concatenateClips(clips, outputPath, callback) {
     const fileList = 'filelist.txt';
     const fileContent = clips.map(clip => `file '${clip}'`).join('\n');
     fs.writeFileSync(fileList, fileContent);
-
+    console.log("created")
     ffmpeg()
         .input(fileList)
         .inputOptions(['-f concat', '-safe 0']) // Corrected input options
@@ -46,45 +52,40 @@ function concatenateClips(clips, outputPath, callback) {
         .run();
 }
 
-
-// Main function to create the video from screenshots
 function createVideo(screenshots, durations, outputPath) {
     let clips = [];
 
-    const processScreenshot = (index) => {
-        if (index < screenshots.length) {
-            const screenshot = screenshots[index];
-            const duration = durations[index];
-            const clipPath = `clip${index}.mp4`; // Temporary clip path
+    for (let index = 0; index < screenshots.length; index++) {
+        const screenshot = screenshots[index];
+        const duration = durations[index];
+        const clipPath = `clip${index}.mp4`; // Temporary clip path
 
-            createClipFromImage(screenshot, duration, clipPath, (err, clip) => {
-                if (err) {
-                    console.error(`Failed to create clip for ${screenshot}: ${err}`);
-                    return;
-                }
+        createClipFromImage(screenshot, duration, clipPath, (err, clip) => {
+            if (err) {
+                console.error(`Failed to create clip for ${screenshot}: ${err}`);
+                return;
+            }
 
-                clips.push(clip);
-                processScreenshot(index + 1); // Process the next screenshot
-            });
-        } else {
-            // All screenshots processed, concatenate clips
-            concatenateClips(clips, outputPath, (err) => {
-                if (err) {
-                    console.error(`Failed to concatenate clips: ${err}`);
-                    return;
-                }
-                console.log('All done');
+            clips.push(clip);
 
-                // Cleanup: Delete temporary clip files
-                // clips.forEach(clip => fs.unlinkSync(clip));
-                // fs.unlinkSync('filelist.txt'); // Delete the temporary file list
-            });
-        }
-    };
+            if (index === screenshots.length - 1) {
+                // All screenshots processed, concatenate clips
+                concatenateClips(clips, outputPath, (err) => {
+                    if (err) {
+                        console.error(`Failed to concatenate clips: ${err}`);
+                        return;
+                    }
+                    console.log('All done');
 
-    // Start processing from the first screenshot
-    processScreenshot(0);
+                    // Cleanup: Delete temporary clip files
+                    // clips.forEach(clip => fs.unlinkSync(clip));
+                    // fs.unlinkSync('filelist.txt'); // Delete the temporary file list
+                });
+            }
+        });
+    }
 }
+
 
 // Example usage
 const screenshots = [
